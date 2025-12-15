@@ -9,10 +9,10 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: us-east-1
-  ECR_ALIAS: abcd1234
-  ECR_REPO: simple-website
-  IMAGE_NAME: simple-website
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_ALIAS: ${{ vars.ECR_ALIAS }}
+  ECR_REPO: ${{ vars.ECR_REPO }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
 
 jobs:
   build:
@@ -25,16 +25,16 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Login to Public ECR
         run: |
-          aws ecr-public get-login-password --region us-east-1 \
+          aws ecr-public get-login-password --region ${{ vars.AWS_REGION }} \
             | docker login --username AWS --password-stdin public.ecr.aws
 
       - name: Build image
         run: |
-          docker build -t $IMAGE_NAME:${{ github.sha }} .
+          docker build -t ${{ vars.IMAGE_NAME }}:${{ github.sha }} .
 
       - name: Tag image
         run: |
