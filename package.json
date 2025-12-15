@@ -1,0 +1,15 @@
+{
+  "name": "simple-website",
+  "version": "1.0.0",
+  "description": "A simple Node.js website deployed with Helm",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "prom-client": "^15.1.0"
+  }
+}

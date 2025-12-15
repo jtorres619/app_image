@@ -1,0 +1,46 @@
+stages:
+  - validate
+  - build
+  - push
+
+variables:
+  IMAGE_NAME: simple-website
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REPO: simple-website
+
+.default-docker:
+  image: docker:25
+  services:
+    - docker:25-dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+
+before_script:
+  - apk add --no-cache aws-cli bash
+
+validate:
+  stage: validate
+  extends: .default-docker
+  script:
+    - docker build -t $IMAGE_NAME:validate .
+    - docker run --rm $IMAGE_NAME:validate sh -c "node src/server.js --help || true"
+
+build:
+  stage: build
+  extends: .default-docker
+  script:
+    - docker build -t $IMAGE_NAME:$CI_COMMIT_SHA .
+
+push:
+  stage: push
+  extends: .default-docker
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  script: 
+    - aws ecr-public get-login-password --region us-east-1 \ 
+      | docker login --username AWS --password-stdin public.ecr.aws # This is the public ECR registry for testing purposes
+    - docker tag $IMAGE_NAME:$CI_COMMIT_SHA public.ecr.aws/$ECR_ALIAS/$ECR_REPO:$CI_COMMIT_SHA
+    - docker tag $IMAGE_NAME:$CI_COMMIT_SHA public.ecr.aws/$ECR_ALIAS/$ECR_REPO:latest
+    - docker push public.ecr.aws/$ECR_ALIAS/$ECR_REPO:$CI_COMMIT_SHA
+    - docker push public.ecr.aws/$ECR_ALIAS/$ECR_REPO:latest
