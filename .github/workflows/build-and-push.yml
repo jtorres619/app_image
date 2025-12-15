@@ -1,0 +1,47 @@
+name: Build and Push to Public ECR
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_ALIAS: abcd1234
+  ECR_REPO: simple-website
+  IMAGE_NAME: simple-website
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Public ECR
+        run: |
+          aws ecr-public get-login-password --region us-east-1 \
+            | docker login --username AWS --password-stdin public.ecr.aws
+
+      - name: Build image
+        run: |
+          docker build -t $IMAGE_NAME:${{ github.sha }} .
+
+      - name: Tag image
+        run: |
+          docker tag $IMAGE_NAME:${{ github.sha }} public.ecr.aws/$ECR_ALIAS/$ECR_REPO:${{ github.sha }}
+          docker tag $IMAGE_NAME:${{ github.sha }} public.ecr.aws/$ECR_ALIAS/$ECR_REPO:latest
+
+      - name: Push image
+        run: |
+          docker push public.ecr.aws/$ECR_ALIAS/$ECR_REPO:${{ github.sha }}
+          docker push public.ecr.aws/$ECR_ALIAS/$ECR_REPO:latest
